@@ -1,0 +1,5 @@
+[[beans-java]]
+= 基于 Java 的容器配置
+:page-section-summary-toc: 1
+
+本节介绍如何在Java代码中使用注释来配置Spring容器。

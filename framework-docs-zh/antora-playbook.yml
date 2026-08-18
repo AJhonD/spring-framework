@@ -1,0 +1,28 @@
+site:
+  title: Spring Framework 中文文档
+  url: https://docs.spring.io/spring-framework/reference
+  robots: allow
+git:
+  ensure_git_suffix: false
+content:
+  sources:
+  - url: ../
+    start_path: framework-docs-zh
+asciidoc:
+  extensions:
+    - '@asciidoctor/tabs'
+  attributes:
+    page-stackoverflow-url: https://stackoverflow.com/questions/tagged/spring
+    page-pagination: ''
+    hide-uri-scheme: '@'
+    tabs-sync-option: '@'
+urls:
+  latest_version_segment_strategy: redirect:to
+  latest_version_segment: ''
+  redirect_facility: httpd
+runtime:
+  log:
+    failure_level: warn
+ui:
+  bundle:
+    url: https://github.com/spring-io/antora-ui-spring/releases/download/v0.4.26/ui-bundle.zip

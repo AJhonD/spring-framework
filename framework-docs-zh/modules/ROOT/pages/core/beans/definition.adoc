@@ -1,0 +1,410 @@
+[[beans-definition]]
+= Bean 概述
+
+Spring IoC 容器管理一个或多个 bean。这些bean是使用您提供给容器的配置元数据（例如，以 XML `<bean/>` 定义的形式）创建的。
+
+在容器本身内部，这些bean定义以 `BeanDefinition` 对象的形式表示，其中包含（除其他信息外）以下元数据：
+
+* 一个包限定的类名：通常是所定义bean的实际实现类。
+* Bean的行为配置元素，用于声明bean在容器中应如何表现（作用域、生命周期回调等）。
+* Bean完成其工作所需的对其他bean的引用。这些引用也称为协作者或依赖项。
+* 在新创建的对象中设置的其他配置设置——例如，管理连接池的bean中的池大小限制或要使用的连接数。
+
+此元数据转换为一组构成每个bean定义的属性。
+下表描述了这些属性：
+
+[[beans-factory-bean-definition-tbl]]
+.Bean 定义
+|===
+| 属性 | 解释详见
+
+| Class
+| xref:core/beans/definition.adoc#beans-factory-class[实例化 Bean]
+
+| Name
+| xref:core/beans/definition.adoc#beans-beanname[命名 Beans]
+
+| Scope
+| xref:core/beans/factory-scopes.adoc[Bean 作用域]
+
+| Constructor arguments
+| xref:core/beans/dependencies/factory-collaborators.adoc[依赖注入]
+
+| Properties
+| xref:core/beans/dependencies/factory-collaborators.adoc[依赖注入]
+
+| Autowiring mode
+| xref:core/beans/dependencies/factory-autowire.adoc[自动装配]
+
+| Lazy initialization mode
+| xref:core/beans/dependencies/factory-lazy-init.adoc[懒加载 Bean]
+
+| Initialization method
+| xref:core/beans/factory-nature.adoc#beans-factory-lifecycle-initializingbean[初始化回调]
+
+| Destruction method
+| xref:core/beans/factory-nature.adoc#beans-factory-lifecycle-disposablebean[销毁回调]
+|===
+
+除了包含如何创建特定bean信息的bean定义之外，`ApplicationContext` 实现还允许注册容器外（由用户）创建的现有对象。
+这是通过 `getAutowireCapableBeanFactory()` 方法访问 `ApplicationContext` 的 `BeanFactory` 来实现的，该方法返回 `DefaultListableBeanFactory` 实现。`DefaultListableBeanFactory` 通过 `registerSingleton(..)`
+`registerBeanDefinition(..)` 方法支持这种注册。然而，典型应用仅通过常规 bean 定义元数据定义的 bean 进行工作。
+
+[NOTE]
+====
+Bean 元数据和手动提供的单例实例需要尽早注册，以便容器在自动装配和其他内省步骤中正确处理它们。虽然在一定程度上支持覆盖现有元数据和现有单例实例，
+但在运行时注册新 Bean（与对工厂的实时访问同时进行）官方并不支持，可能会导致并发访问异常、Bean 容器状态不一致，或两者兼而有之。
+====
+
+
+[[beans-definition-overriding]]
+== 覆盖 Bean
+
+Bean 覆盖发生在使用已分配的标识符注册 Bean 时。尽管 Bean 覆盖是被允许的，但它使得配置更难以阅读。
+
+WARNING: Bean 覆盖将在未来的版本中弃用。
+
+要完全禁用bean覆盖，您可以在 `ApplicationContext` 刷新之前将其 `allowBeanDefinitionOverriding` 标志设置为 `false`。在这种设置下，如果使用了bean覆盖，将会抛出异常。
+
+默认情况下，容器会在 `INFO` 级别记录覆盖 bean 的每次尝试，以便您可以相应地
+调整配置。虽然不推荐，但您可以通过将 `allowBeanDefinitionOverriding` 标志设置为 `true` 来静默这些日志。
+
+.Java 配置
+****
+如果您使用 Java 配置，只要 `@Bean` 方法的返回类型与同名 bean 类的类型匹配，相应的 `@Bean` 方法就会静默地覆盖具有相同组件名称的扫描到的 bean 类。这简单来说就是，容器会调用 `@Bean` 工厂方法，而不是 bean 类上预先声明的任何构造函数。
+****
+
+NOTE: 我们承认在测试场景中覆盖 Bean 很方便，并且对此有明确的支持。请参阅
+xref:testing/testcontext-framework/bean-overriding.adoc[这个章节] 获取更多详情。
+
+
+[[beans-beanname]]
+== 命名 Bean
+
+每个 Bean 都有一个或多个标识符。这些标识符必须在承载该 Bean 的容器内是唯一的。Bean
+通常只有一个标识符。然而，如果需要多个，额外的标识符可以被视为别名。
+
+在基于 XML 的配置元数据中，您可以使用 `id` 属性、`name` 属性或两者来指定 bean 标识符。`id`
+属性允许您指定一个确切的 `id`。通常，这些名称是字母数字的（如 'myBean'、'someService'
+等），但也可以包含特殊字符。如果您想为 bean 引入其他别名，您也可以在 `name`
+属性中指定它们，用逗号（`,`）、分号（`;`）或空格分隔。尽管 `id` 属性定义为 `xsd:string` 类型，但 bean
+的唯一性是由容器强制执行的，而不是由 XML 解析器执行。
+
+您并不需要为 bean 提供一个 `name` 或一个 `id`。如果您没有显示提供一个 `name` 或 `id`，容器将为该 bean
+生成一个唯一名称。然而，如果您想通过使用 `ref` 元素或服务定位器风格的查找来通过名称引用该
+bean，则必须提供一个名称。不提供名称的原因与使用 xref:core/beans/dependencies/factory-properties-detailed.adoc#beans-inner-beans[内部 Bean] 和 xref:core/beans/dependencies/factory-autowire.adoc[自动装配协作者] 有关。
+
+.Bean 命名规范
+****
+约定是，在命名 bean 时使用标准的 Java 实例字段命名约定。也就是说，bean
+名称以小写字母开头，并从那里开始驼峰式命名。此类名称的示例包括 `accountManager`、`accountService`、`userDao`、`
+loginController` 等等。
+
+一致地命名 bean 可以让你的配置更易于阅读和理解。此外，如果你使用 Spring AOP，在将通知应用于一组按名称相关的 bean 时，它会很有帮助。
+****
+
+NOTE: 通过类路径中的组件扫描，Spring 会按照前面描述的规则为未命名的组件生成 bean
+名称：基本上是取简单类名，并将其首字母转为小写。不过，在（不常见的）特殊情况下，如果类名不止一个字符，且第一个和第
+二个字符都是大写，则保留原始大小写。这些规则与 `java.beans.Introspector.decapitalize` 所定义的规则相同（Spring
+在此处使用的正是该规则）。
+
+[[beans-beanname-alias]]
+=== 在 Bean 定义之外为 Bean 起别名
+
+在 bean 定义本身中，你可以通过使用 `id` 属性指定的最多一个名称和 `name` 属性中的任意数量其他名称的组合，为 bean 提供多个名称。这些名称可以是同一 bean 的等效别名，在某些情况下很有用，例如让应用程序中的每个组件通过使用特定于该组件自身的 bean名称来引用公共依赖项。
+
+在实际定义 bean 的位置指定所有别名并不总是足够的，然而，有时需要为在其他地方定义的 bean 引入别名。这在大型系统中很常见，其中配置被拆分到各个子系统，每个子系统都有自己的一组对象定义。在基于 XML 的配置元数据中，可以使用 `<alias/>` 元素来完成这一点。
+以下示例演示了如何操作：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<alias name="fromName" alias="toName"/>
+----
+
+在这种情况下，位于同一容器中名为 `fromName` 的 bean 在使用此别名定义后，也可以被称为 `toName`。
+
+例如，子系统 A 的配置元数据可能会引用一个名为 `subsystemA-dataSource` 的 DataSource。子系统 B
+的配置元数据可能会引用一个名为 `subsystemB-dataSource` 的
+DataSource。在组合使用这两个子系统的主应用程序时，主应用程序会引用名为 `myApp-dataSource` 的
+DataSource。要使这三个名称都引用同一个对象，可以向配置元数据中添加以下别名定义：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<alias name="myApp-dataSource" alias="subsystemA-dataSource"/>
+	<alias name="myApp-dataSource" alias="subsystemB-dataSource"/>
+----
+
+现在，每个组件和主应用程序都可以通过一个唯一的、保证不会与任何其他定义冲突的名称（实际上创建了一个命名空间）来引用`dataSource`，然而它们引用的却是同一个bean。
+
+.Java 配置
+****
+如果您使用 Java 配置，可以使用 `@Bean` 注解来提供别名。
+详情请见 xref:core/beans/java/bean-annotation.adoc[使用 `@Bean` 注解]。
+****
+
+
+[[beans-factory-class]]
+== 实例化 Beans
+
+Bean Definition 本质上是一个创建一个或多个对象的配方。当被请求时，容器会查看命名 Bean 的配方，并使用该 Bean
+Definition 封装的配置元数据来创建（或获取）一个实际的对象。
+
+如果您使用基于 XML 的配置元数据，您需要在 `<bean/>` 元素的 `class` 属性中指定要实例化的对象类型（或 class）。此
+`class` 属性（在内部，它是 `BeanDefinition` 实例上的一个 `Class` 属性）通常是必需的。（有关例外情况，请参阅
+xref:core/beans/definition.adoc#beans-factory-class-instance-factory-method[使用实例工厂方法进行实例化] 和  xref:core/beans/child-bean-definitions.adoc[Bean Definition 继承]。）
+
+您可以使用 `Class` 属性的两种方式之一：
+
+* 通常，在 container 直接通过反射调用其构造函数来创建 bean 的情况下，指定要构造的 bean 类，这在 Java
+代码中相当于使用了 `new` 操作符。
+* 要指定包含被调用来创建对象的 `static` 工厂方法的实际类，这是在容器调用类上的 `static` 工厂方法来创建bean这种不太常见的情况下使用的。调用 `static` 工厂方法返回的对象类型可以是同一个类，也可以是另一个完全不同的类。
+
+.嵌套类名
+****
+如果您想为嵌套类配置一个 bean 定义，您可以使用嵌套类的二进制名称或源名称。
+
+例如，如果你有一个名为 `SomeThing` 的类位于 `com.example` 包中，并且这个 `SomeThing` 类有一个名为 `OtherThing`
+的嵌套类 `static`，它们可以通过美元符号（`$`）或点号（`.`）来分隔。因此，在 bean 定义中的 `class` 属性的值将是
+`com.example.SomeThing$OtherThing` 或 `com.example.SomeThing.OtherThing`。
+****
+
+[[beans-factory-class-ctor]]
+=== 使用构造函数进行实例化
+
+当你通过构造函数方法创建一个 Bean 时，所有正常类都可以由 Spring
+使用并且与之兼容。也就是说，正在开发的类不需要实现任何特定接口或以特定方式编码。只需指定 Bean
+类就足够了。然而，根据你为该特定 Bean 使用的 IoC 类型，你可能需要一个默认（空）构造函数。
+
+Spring IoC 容器可以管理您希望其管理的几乎所有类。它不仅限于管理真正的 JavaBeans。大多数 Spring
+用户更喜欢具有默认（无参数）构造函数和适当 setters 与 getters、其模式与容器中的属性相对应的实际
+JavaBeans。您还可以在容器中拥有更多异类非 Bean 风格的类。例如，如果您需要使用绝对不遵循 JavaBean
+规范的遗留连接池，Spring 也可以管理它。
+
+使用基于 XML 的配置元数据，您可以按照以下方式指定您的 Bean 类：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean"/>
+
+	<bean name="anotherExample" class="examples.ExampleBeanTwo"/>
+----
+
+关于向构造函数（如有必要）提供参数的机制以及对象构造后设置对象实例属性的详细信息，请参阅
+xref:core/beans/dependencies/factory-collaborators.adoc[注入依赖]。
+
+NOTE: 在构造函数参数的情况下，容器可以在几个重载构造函数中选取一个相应的构造函数。话虽如此，为了避免歧义，建议尽可能使您的构造函数签名尽可能简单直接。
+
+[[beans-factory-class-static-factory-method]]
+=== 使用静态工厂方法进行实例化
+
+当定义一个使用静态工厂方法创建的 bean 时，使用 `class` 属性来指定包含 `static` 工厂方法的类，并使用名为 `factory-method` 的属性来指定工厂方法本身的名称。您应该能够调用此方法（如后文所述，可以带有可选参数）并返回一个活动对象，随后该对象被当作是通过构造函数创建的来处理。此类 bean 定义的一个用途是在旧代码中调用 `static` factory。
+
+以下 bean 定义指定了该 bean 将通过调用工厂方法来创建。该定义不指定返回对象的类型（class），而是指定包含 factory
+方法的类。在此示例中，`createInstance()` 方法必须是 `static` 方法。以下示例展示了如何指定 factory 方法：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="clientService"
+		class="examples.ClientService"
+		factory-method="createInstance"/>
+----
+
+以下示例展示了一个可与前述 bean 定义配合使用的类：
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class ClientService {
+		private static ClientService clientService = new ClientService();
+		private ClientService() {}
+
+		public static ClientService createInstance() {
+			return clientService;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	class ClientService private constructor() {
+		companion object {
+			private val clientService = ClientService()
+			@JvmStatic
+			fun createInstance() = clientService
+		}
+	}
+----
+======
+
+关于向 factory 方法提供（可选）参数以及从 factory 返回对象后设置对象实例属性的机制详情，
+请参阅 xref:core/beans/dependencies/factory-properties-detailed.adoc[依赖与配置详解]。
+
+NOTE: 对于 factory 方法参数的情况，容器可以在多个同名重载方法中选择对应的方法。尽管如此，为避免歧义，建议尽量保持工厂方法签名简单直接。
+
+[TIP]
+====
+工厂方法重载的一个典型问题案例是 Mockito，其 `mock` 方法有大量重载。请尽可能选择 `mock` 最具体的变体。
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="clientService" class="org.mockito.Mockito" factory-method="mock">
+		<constructor-arg type="java.lang.Class" value="examples.ClientService"/>
+		<constructor-arg type="java.lang.String" value="clientService"/>
+	</bean>
+----
+====
+
+[[beans-factory-class-instance-factory-method]]
+=== 使用实例工厂方法进行实例化
+
+与通过 xref:core/beans/definition.adoc#beans-factory-class-static-factory-method[静态工厂方法]
+进行实例化类似，使用实例工厂方法进行实例化会调用容器中现有 bean 的非静态方法来创建新
+bean。要使用此机制，请将 `class` 属性留空，并在 `factory-bean` 属性中指定当前（或父级或祖先级）容器
+中包含要调用的实例方法以创建对象的 bean 的名称。使用 `factory-method` 属性设置工厂方法本身的名称。以下示例展示了如何配置这样的 bean：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<!-- 工厂 bean，其中包含一个名为 `createClientServiceInstance()` 的方法-->
+	<bean id="serviceLocator" class="examples.DefaultServiceLocator">
+		<!-- 注入此定位器 Bean 所需的任何依赖项 -->
+	</bean>
+
+	<!-- 通过工厂 bean 创建的 bean -->
+	<bean id="clientService"
+		factory-bean="serviceLocator"
+		factory-method="createClientServiceInstance"/>
+----
+
+以下示例展示了相应的类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class DefaultServiceLocator {
+
+		private static ClientService clientService = new ClientServiceImpl();
+
+		public ClientService createClientServiceInstance() {
+			return clientService;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	class DefaultServiceLocator {
+		companion object {
+			private val clientService = ClientServiceImpl()
+		}
+		fun createClientServiceInstance(): ClientService {
+			return clientService
+		}
+	}
+----
+======
+
+一个工厂类也可以包含多个工厂方法，如以下示例所示：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="serviceLocator" class="examples.DefaultServiceLocator">
+		<!-- inject any dependencies required by this locator bean -->
+	</bean>
+
+	<bean id="clientService"
+		factory-bean="serviceLocator"
+		factory-method="createClientServiceInstance"/>
+
+	<bean id="accountService"
+		factory-bean="serviceLocator"
+		factory-method="createAccountServiceInstance"/>
+----
+
+以下示例展示了相应的类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class DefaultServiceLocator {
+
+		private static ClientService clientService = new ClientServiceImpl();
+
+		private static AccountService accountService = new AccountServiceImpl();
+
+		public ClientService createClientServiceInstance() {
+			return clientService;
+		}
+
+		public AccountService createAccountServiceInstance() {
+			return accountService;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	class DefaultServiceLocator {
+		companion object {
+			private val clientService = ClientServiceImpl()
+			private val accountService = AccountServiceImpl()
+		}
+
+		fun createClientServiceInstance(): ClientService {
+			return clientService
+		}
+
+		fun createAccountServiceInstance(): AccountService {
+			return accountService
+		}
+	}
+----
+======
+
+这种方法表明，工厂 bean 本身可以通过依赖注入（DI）进行管理和配置。 查看 xref:core/beans/dependencies/factory-properties-detailed.adoc[依赖与配置详解].
+
+NOTE: 在 Spring 文档中，“factory bean” 指的是在 Spring 容器中配置的、通过
+xref:core/beans/definition.adoc#beans-factory-class-instance-factory-method[实例] 或
+xref:core/beans/definition.adoc#beans-factory-class-static-factory-method[静态] 工厂方法创建对象的
+bean。相比之下， `FactoryBean`（注意大小写）指的是 Spring 特有的 xref:core/beans/factory-extension.adoc#beans-factor
+y-extension-factorybean[`FactoryBean`] 实现类。
+
+[[beans-factory-type-determination]]
+=== 确定 Bean 的运行时类型
+
+特定 bean 的运行时类型并不容易确定。bean 元数据定义中指定的类仅仅是一个初始类引用，它可能结合了声明的工厂方法，或者是一个 `FactoryBean` 类，这可能导致 bean 的运行时类型不同，或者在实例级 factory 方法（通过指定的
+`factory-bean` 名称解析）的情况下，该类可能根本未设置。此外，AOP proxy 可能会用基于接口的 proxy 包装 bean
+实例，从而限制了对目标 bean 实际类型（仅其实现的接口）的暴露。
+
+查找某个特定 Bean 的实际运行时类型的推荐方式是，对指定的 Bean 名称进行 `BeanFactory.getType`
+调用。这会考虑上述所有情况，并返回对于同一 Bean 名称，`BeanFactory.getBean` 调用将要返回的对象类型。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

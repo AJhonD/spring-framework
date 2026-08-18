@@ -1,0 +1,23 @@
+[[beans-introduction]]
+= Spring IoC 容器与 Bean 简介
+
+本章节涵盖了 Spring 框架对控制反转（IoC）原则的实现。
+
+依赖注入（DI）是 IoC 的一种特殊形式，其中对象仅通过构造函数参数，工厂方法参数，或在对象实例化或者工厂方法的返回后设置的属性来定义它们之间的依赖关系（即它们与之协同工作的其他对象）。IoC 容器会在创建bean的时候会注入这些依赖。 这个过程在根本上与bean本身通过直接构造类或使用服务定位器模式等机制来控制其依赖项的实例化或位置的做法相反。
+
+`org.springframework.beans` 和 `org.springframework.context` 包是 Spring 框架 IoC 容器的基础。
+{spring-framework-api}/beans/factory/BeanFactory.html[`BeanFactory`] 接口提供一种高级的配置机制能够管理任何类型的对象。
+{spring-framework-api}/context/ApplicationContext.html[`ApplicationContext`]
+是 `BeanFactory` 的子接口，提供了额外的功能，如：
+
+* 与 Spring 的 AOP 特性更轻松的集成
+* 消息资源处理 (用于国际化)
+* 事件发布功能
+* 应用程序层特定的上下文，例如在 web 应用程序使用的 `WebApplicationContext`。
+
+简而言之，`BeanFactory` 提供了配置框架的基本功能，而 `ApplicationContext` 则提供了额外的企业特定功能。`ApplicationContext` 是 `BeanFactory` 的一个完整超集，在本章中专门用于描述Spring的IoC容器。
+有关使用 `BeanFactory` 而非 `ApplicationContext` 的更多信息，请参见涵盖
+xref:core/beans/beanfactory.adoc[`BeanFactory` API]的部分。
+
+在Spring中，构成应用程序主干并由Spring IoC容器管理的对象称为bean。bean是由Spring IoC容器实例化、组装和管理的对象。否则，bean只是应用程序中众多对象之一。bean及其之间的依赖关系，反映在容器所使用的配置元数据中。
+

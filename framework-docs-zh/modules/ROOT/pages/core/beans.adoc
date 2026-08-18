@@ -1,0 +1,5 @@
+[[beans]]
+= IOC 容器
+:page-section-summary-toc: 1
+
+本章涵盖了 Spring 的控制反转（IoC）容器。

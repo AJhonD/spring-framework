@@ -1,0 +1,515 @@
+[[beans-factory-collaborators]]
+= 依赖注入
+
+依赖注入（DI）是一个过程，在此过程中，对象仅通过构造函数参数、工厂方法的参数，或在对象实例被构造或从工厂
+方法返回后设置的属性来定义其依赖关系（即它们所协作的其他对象）。 容器随后在创建 Bean 时注入这些依赖。这一过程从根本上讲，与 Bean 自身通过直接构造类或使用服务定位器模式来控制其依赖的实例化或定位相反（因此得名“控制反转”）。
+
+采用依赖注入（DI）原则后，代码更加简洁，当对象被赋予其依赖时，解耦效果也更佳。对象不再自行查找依赖，也不知晓依赖的位置或类别。因此，你的类更易于测试，尤其是当依赖基于接口或抽象基类时，可以在单元测试中使用桩（stub）或模拟（mock） 实现。
+
+依赖注入存在两种主要变体：
+xref:core/beans/dependencies/factory-collaborators.adoc#beans-constructor-injection[基于构造器的依赖注入]
+和 xref:core/beans/dependencies/factory-collaborators.adoc#beans-setter-injection[基于 Setter 的依赖注入]。
+
+[[beans-constructor-injection]]
+== 基于构造器的依赖注入
+
+基于构造器的依赖注入是通过容器调用带有多个参数的构造器来完成的，每个参数代表一个依赖。调用带有特定参数的
+`static` factory 方法来构造 bean 的方式几乎与之等价，本讨论将构造器参数与 `static` 工厂方法参数视为类似处理。以下示例展示了一个只能通过构造器注入进行依赖注入的类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class SimpleMovieLister {
+
+		// SimpleMovieLister 依赖于 MovieFinder
+		private final MovieFinder movieFinder;
+
+		// 构造函数，以便 Spring 容器可以注入 MovieFinder
+		public SimpleMovieLister(MovieFinder movieFinder) {
+			this.movieFinder = movieFinder;
+		}
+
+		// 实际使用注入的 `MovieFinder` 的业务逻辑已省略...
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	// 构造函数，以便 Spring 容器可以注入 `MovieFinder`
+	class SimpleMovieLister(private val movieFinder: MovieFinder) {
+		// 实际使用注入的 `MovieFinder` 的业务逻辑已省略...
+	}
+----
+======
+
+请注意，这个类并没有什么特别之处。它是一个 POJO，不依赖于容器特定的接口、基类或注解。
+
+[[beans-factory-ctor-arguments-resolution]]
+=== 构造函数参数解析
+
+构造函数参数解析匹配通过使用参数的类型进行。如果 bean 定义的构造函数参数中不存在潜在歧义，则 bean
+定义中构造函数参数的定义顺序即为 bean 实例化时这些参数提供给相应构造函数的顺序。考虑以下类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package x.y;
+
+	public class ThingOne {
+
+		public ThingOne(ThingTwo thingTwo, ThingThree thingThree) {
+			// ...
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package x.y
+
+	class ThingOne(thingTwo: ThingTwo, thingThree: ThingThree)
+----
+======
+
+假设 `ThingTwo` 和 `ThingThree` 类之间不存在继承关系，则不会产生潜在歧义。因此，以下配置可以正常工作，您无需在 `<constructor-arg/>` 元素中显式指定构造函数参数索引或类型。
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<beans>
+		<bean id="beanOne" class="x.y.ThingOne">
+			<constructor-arg ref="beanTwo"/>
+			<constructor-arg ref="beanThree"/>
+		</bean>
+
+		<bean id="beanTwo" class="x.y.ThingTwo"/>
+
+		<bean id="beanThree" class="x.y.ThingThree"/>
+	</beans>
+----
+
+当另一个 bean 被引用时，其类型是已知的，因此可以进行匹配（如前一个示例所示）。当使用简单类型时，例如
+`<value>true</value>`，Spring 无法确定值的类型，因此在没有帮助的情况下无法按类型进行匹配。考虑以下类：
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package examples;
+
+	public class ExampleBean {
+
+		// 计算终极答案所需的年数
+		private final int years;
+
+		// 生命、宇宙以及一切的答案
+		private final String ultimateAnswer;
+
+		public ExampleBean(int years, String ultimateAnswer) {
+			this.years = years;
+			this.ultimateAnswer = ultimateAnswer;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package examples
+
+	class ExampleBean(
+		private val years: Int, // 计算终极答案所需的年数
+		private val ultimateAnswer: String // 生命、宇宙以及一切的答案
+	)
+----
+======
+
+[discrete]
+[[beans-factory-ctor-arguments-type]]
+==== 构造函数参数类型匹配
+
+在前述场景中，如果您通过 `type` 属性显式指定构造器参数的类型，容器便可以使用简单类型的类型匹配，如下例所示：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean">
+		<constructor-arg type="int" value="7500000"/>
+		<constructor-arg type="java.lang.String" value="42"/>
+	</bean>
+----
+
+[discrete]
+[[beans-factory-ctor-arguments-index]]
+==== 构造函数参数索引
+
+你可以使用 `index` 属性来显式指定构造函数参数的索引，如下例所示：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean">
+		<constructor-arg index="0" value="7500000"/>
+		<constructor-arg index="1" value="42"/>
+	</bean>
+----
+
+除了解决多个简单值的歧义之外，指定索引还可以解决构造函数具有两个相同类型参数时的歧义。
+
+NOTE: 索引从 0 开始。
+
+[discrete]
+[[beans-factory-ctor-arguments-name]]
+==== 构造函数参数名称
+
+你也可以使用构造器参数名来进行值的消歧，如下例所示：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean">
+		<constructor-arg name="years" value="7500000"/>
+		<constructor-arg name="ultimateAnswer" value="42"/>
+	</bean>
+----
+
+请记住，为了让这一功能开箱即用，您的代码必须使用 `-parameters` 标志进行编译，以便 Spring 能够从构造函数中查找参数名称。如果您无法或不想使用 `-parameters` 标志编译代码，可以使用 https://download.oracle.com/javase/8/docs/api/java/beans/ConstructorProperties.html[@ConstructorProperties]
+JDK 注解来显式命名构造函数参数。示例类如下所示：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package examples;
+
+	public class ExampleBean {
+
+		// Fields omitted
+
+		@ConstructorProperties({"years", "ultimateAnswer"})
+		public ExampleBean(int years, String ultimateAnswer) {
+			this.years = years;
+			this.ultimateAnswer = ultimateAnswer;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes",chomp="-packages"]
+----
+	package examples
+
+	class ExampleBean
+	@ConstructorProperties("years", "ultimateAnswer")
+	constructor(val years: Int, val ultimateAnswer: String)
+----
+======
+
+
+[[beans-setter-injection]]
+== 基于 Setter 的依赖注入
+
+基于 Setter 的 DI 是由 container 在调用无参构造函数或无参 `static` 工厂方法来实例化 bean 之后，调用 bean 上的
+setter 方法来实现的。
+
+以下示例展示了一个只能通过纯 setter 注入进行依赖注入的类。该类是常规的 Java 类，是一个 POJO，不依赖 container
+特定的接口、基类或注解。
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class SimpleMovieLister {
+
+		// SimpleMovieLister 依赖于 MovieFinder
+		private MovieFinder movieFinder;
+
+		// 一个 setter 方法，以便 Spring 容器可以注入 `MovieFinder`
+		public void setMovieFinder(MovieFinder movieFinder) {
+			this.movieFinder = movieFinder;
+		}
+
+		// 实际使用注入的 `MovieFinder` 的业务逻辑已被省略...
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+class SimpleMovieLister {
+
+	// 一个延迟初始化的属性，以便 Spring container 可以注入 `MovieFinder`
+	lateinit var movieFinder: MovieFinder
+
+	// 实际使用注入的 `MovieFinder` 的业务逻辑已被省略...
+}
+----
+======
+
+
+`ApplicationContext` 支持基于构造函数和基于 setter 的依赖注入，用于其管理的
+bean。它还支持在部分依赖已通过构造函数方式注入后，再执行基于 setter 的依赖注入。你可以以 `BeanDefinition`
+的形式配置依赖，并结合 `PropertyEditor` 实例将属性从一种格式转换为另一种格式。然而，大多数 Spring
+用户并不直接（即以编程方式）使用这些类，而是使用 XML `bean` 定义、注解组件（即使用 `@Component`、`@Controller`
+等注解的类），或基于 Java 的 `@Configuration` 类中的 `@Bean` 方法。这些来源随后会在内部转换为 `BeanDefinition`
+的实例，并用于加载整个 Spring IoC 容器实例。
+
+[[beans-constructor-vs-setter-injection]]
+.基于构造器的依赖注入或基于 Setter 的依赖注入?
+****
+由于您可以混合使用基于构造函数的依赖注入和基于 Setter 的依赖注入，因此一个良好的经验法则是：对于必需依赖，使用构造函数；对于可选依赖，使用 Setter 方法或配置方法。请注意，在 Setter 方法上使用 xref:core/beans/annotation-config/autowired.adoc[@Autowired]
+注解可以将该属性设为必需依赖；然而，更推荐采用构造函数注入并结合编程方式验证参数。
+
+Spring 团队通常提倡构造器注入，因为它允许你将应用程序组件实现为不可变对象，并确保必需的依赖项 不会为 `null`。此外，通过构造器注入的组件在返给客户端（调用方）代码时，始终处于完全初始化状态。附带说明，大量的构造器 参数是一种不良代码味道，暗示该类可能承担了过多的职责，应进行重构以更好地实现关注点分离。
+
+Setter 注入应主要仅用于可选依赖项，这些依赖项可以在类内分配合理的默认值。否则，在代码使用该依赖项的每个地方都必须执
+行非空检查。Setter 注入的一个好处是，setter 方法使该类的对象便于后续重新配置或重新注入。因此，通过
+xref:integration/jmx.adoc[JMX MBeans] 进行管理是 setter 注入的一个极具吸引力的用例。
+
+对于特定类，采用最合理的依赖注入风格。有时，当处理没有源代码的第三方类时，选择已由外部决定。例如，如果第三方类未暴
+露任何 setter 方法，那么构造器注入可能是唯一可用的 DI 形式。
+****
+
+
+[[beans-dependency-resolution]]
+== 依赖解析过程
+
+容器按照以下方式执行 Bean 依赖解析：
+
+* `ApplicationContext` 被创建并使用描述所有 Bean 的配置元数据进行初始化。配置元数据可以通过 XML、Java
+代码或注解来指定。
+* 对于每个 bean，其依赖关系以属性、构造器参数或静态 factory 方法的参数形式表示（如果你使用静态 factory
+方法而非普通构造器的话）。这些依赖会在 bean 实际创建时提供给该 bean。
+* 每个属性或构造函数参数都是要设置的值的实际定义，或者是对 container 中另一个 bean 的引用。
+* 每个属性或构造器参数，如果其值为某个值，则会从指定的格式转换为该属性或构造器参数的实际类型。默认情况下，Spring
+可以将字符串格式提供的值转换为所有内置类型，例如 `int`、`long`、`String`、`boolean` 等。
+
+Spring container 在创建时会验证每个 bean 的配置。然而，bean 的属性本身要等到 bean 实际创建时才会被设置。作用域为单例（singleton）且设置为预实例化（默认情况）的 bean 会在 container 创建时创建。作用域在 xref:core/beans/factory-scopes.adoc[Bean 作用域] 中定义。否则，bean 只会在被请求时才创建。创建 bean 可能会导致一组 bean 被创建，因为 bean 的依赖及其依赖的依赖（依此类推）会被创建并赋值。请注意，这些依赖之间的解析不匹配可能会较晚显现——也就是说，在受影响 bean 首次创建时才会暴露。
+
+.循环依赖
+****
+如果你主要使用构造器注入，则有可能产生无法解决的循环依赖场景。
+
+例如：类 A 通过构造器注入需要类 B 的实例，而类 B 通过构造器注入需要类 A 的实例。如果您为类 A 和类 B
+配置了相互注入的 bean，Spring IoC container 会在运行时检测到此循环引用，并抛出 `BeanCurrentlyInCreationException`。
+
+一种可行的解决方案是修改某些类的源代码，使其通过 setter 而非构造器进行配置。或者，避免使用构造器注入，仅使用
+setter 注入。换句话说，尽管不推荐，但你可以通过 setter 注入来配置循环依赖。
+
+与典型情况（无循环依赖）不同，bean A 与 bean B 之间的循环依赖会迫使其中一个 bean
+在自身完全初始化之前就被注入到另一个 bean 中（经典的鸡生蛋、蛋生鸡场景）。
+****
+
+你可以通常信赖 Spring 会做出正确的处理。它会在 container 加载时检测配置问题，例如引用不存在的 Bean
+和循环依赖。Spring 会尽可能晚地设置属性和解析依赖，即在 Bean 实际创建时进行。这意味着，一个已正确加载的 Spring
+container，在之后请求某个对象时，如果该对象或其依赖项的创建出现问题——例如，Bean
+因属性缺失或无效而抛出异常——则可能引发异常。这种配置问题可能延迟显现的特性，正是 `ApplicationContext`
+实现默认预实例化单例 Bean 的原因。虽然这会提前花费一些时间和内存来创建这些 Bean，但你能在 `ApplicationContext`
+创建时发现配置问题，而不是等到之后。你仍然可以覆盖这一默认行为，使单例 Bean 延迟初始化，而不是急切地预实例化。
+
+如果不存在循环依赖，那么当一个或多个协作 bean 被注入到依赖 bean 中时，每个协作 bean 都会在注入到依赖 bean
+之前被完全配置。这意味着，如果 bean A 依赖于 bean B，Spring IoC container 会在调用 bean A 的 setter
+方法之前完全配置好 bean B。换句话说，该 bean
+会被实例化（如果它不是预实例化的单例），其依赖项会被设置，并且相关的生命周期方法（例如
+xref:core/beans/factory-nature.adoc#beans-factory-lifecycle-initializingbean[配置初始化方法] 或
+xref:core/beans/factory-nature.adoc#beans-factory-lifecycle-initializingbean[InitializingBean 回调方法]）会被调用。
+
+
+[[beans-some-examples]]
+== 依赖注入的示例
+
+以下示例使用基于 XML 的配置元数据来实现基于 setter 的依赖注入。Spring XML 配置文件的一小部分指定了如下一些 bean
+定义：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean">
+		<!-- 使用嵌套的 `ref` 元素进行 setter 注入 -->
+		<property name="beanOne">
+			<ref bean="anotherExampleBean"/>
+		</property>
+
+		<!-- 使用更简洁的 `ref` 属性进行 setter 注入 -->
+		<property name="beanTwo" ref="yetAnotherBean"/>
+		<property name="integerProperty" value="1"/>
+	</bean>
+
+	<bean id="anotherExampleBean" class="examples.AnotherBean"/>
+	<bean id="yetAnotherBean" class="examples.YetAnotherBean"/>
+----
+
+以下示例展示了相应的 `ExampleBean` 类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class ExampleBean {
+
+		private AnotherBean beanOne;
+
+		private YetAnotherBean beanTwo;
+
+		private int i;
+
+		public void setBeanOne(AnotherBean beanOne) {
+			this.beanOne = beanOne;
+		}
+
+		public void setBeanTwo(YetAnotherBean beanTwo) {
+			this.beanTwo = beanTwo;
+		}
+
+		public void setIntegerProperty(int i) {
+			this.i = i;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+class ExampleBean {
+	lateinit var beanOne: AnotherBean
+	lateinit var beanTwo: YetAnotherBean
+	var i: Int = 0
+}
+----
+======
+
+在前面的示例中，setter 方法被声明为与 XML 文件中指定的属性相匹配。以下示例使用了基于构造函数的依赖注入（DI）：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean">
+		<!-- 使用嵌套的 `ref` 元素进行构造器注入 -->
+		<constructor-arg>
+			<ref bean="anotherExampleBean"/>
+		</constructor-arg>
+
+		<!-- 使用更简洁的 `ref` 属性进行构造器注入 -->
+		<constructor-arg ref="yetAnotherBean"/>
+
+		<constructor-arg type="int" value="1"/>
+	</bean>
+
+	<bean id="anotherExampleBean" class="examples.AnotherBean"/>
+	<bean id="yetAnotherBean" class="examples.YetAnotherBean"/>
+----
+
+以下示例展示了相应的 `ExampleBean` 类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class ExampleBean {
+
+		private AnotherBean beanOne;
+
+		private YetAnotherBean beanTwo;
+
+		private int i;
+
+		public ExampleBean(
+			AnotherBean anotherBean, YetAnotherBean yetAnotherBean, int i) {
+			this.beanOne = anotherBean;
+			this.beanTwo = yetAnotherBean;
+			this.i = i;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+class ExampleBean(
+		private val beanOne: AnotherBean,
+		private val beanTwo: YetAnotherBean,
+		private val i: Int)
+----
+======
+
+bean 定义中指定的构造器参数将作为 `ExampleBean` 构造器的参数使用。
+
+现在考虑此示例的一个变体，其中，Spring 不使用构造函数，而是被告知调用一个 `static` factory 方法来返回对象的实例：
+
+[source,xml,indent=0,subs="verbatim,quotes"]
+----
+	<bean id="exampleBean" class="examples.ExampleBean" factory-method="createInstance">
+		<constructor-arg ref="anotherExampleBean"/>
+		<constructor-arg ref="yetAnotherBean"/>
+		<constructor-arg value="1"/>
+	</bean>
+
+	<bean id="anotherExampleBean" class="examples.AnotherBean"/>
+	<bean id="yetAnotherBean" class="examples.YetAnotherBean"/>
+----
+
+以下示例展示了相应的 `ExampleBean` 类：
+
+[tabs]
+======
+Java::
++
+[source,java,indent=0,subs="verbatim,quotes"]
+----
+	public class ExampleBean {
+
+		// 私有构造函数
+		private ExampleBean(...) {
+			...
+		}
+
+		// 静态 factory 方法；该方法的参数可以被视为返回的 bean 的依赖项，无论这些参数实际如何使用。
+		public static ExampleBean createInstance (
+			AnotherBean anotherBean, YetAnotherBean yetAnotherBean, int i) {
+
+			ExampleBean eb = new ExampleBean (...);
+			// 一些其他操作...
+			return eb;
+		}
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	class ExampleBean private constructor() {
+		companion object {
+			// 静态 factory 方法；该方法的参数可以被视为返回的 bean 的依赖项，无论这些参数实际如何使用。
+			@JvmStatic
+			fun createInstance(anotherBean: AnotherBean, yetAnotherBean: YetAnotherBean, i: Int): ExampleBean {
+				val eb = ExampleBean (...)
+				// 一些其他操作...
+				return eb
+			}
+		}
+	}
+----
+======
+
+`static` factory 方法的参数由 `<constructor-arg/>` 元素提供，这与实际使用构造函数的情况完全相同。factory
+方法返回的类类型不必与包含 `static` factory 方法的类类型相同（尽管在本例中它们是相同的）。实例（非静态）factory
+方法的使用方式在本质上与此相同（除了使用 `factory-bean` 属性而非 `class` 属性之外），因此我们在此不再详述这些细节。

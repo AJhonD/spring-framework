@@ -1,0 +1,56 @@
+name: framework
+version: true
+title: Spring Framework 中文文档
+nav:
+  - modules/ROOT/nav.adoc
+
+asciidoc:
+  attributes:
+    attribute-missing: 'warn'
+    chomp: 'all'
+    fold: 'all'
+    table-stripes: 'odd'
+    spring-site: 'https://spring.io'
+    spring-site-blog: '{spring-site}/blog'
+    spring-site-cve: "{spring-site}/security"
+    spring-site-guides: '{spring-site}/guides'
+    spring-site-projects: '{spring-site}/projects'
+    spring-site-tools: "{spring-site}/tools"
+    spring-org: 'spring-projects'
+    spring-github-org: "https://github.com/{spring-org}"
+    spring-framework-github: "https://github.com/{spring-org}/spring-framework"
+    spring-framework-code: '{spring-framework-github}/tree/main'
+    spring-framework-issues: '{spring-framework-github}/issues'
+    spring-framework-wiki: '{spring-framework-github}/wiki'
+    docs-site: 'https://docs.spring.io'
+    spring-framework-docs-root: '{docs-site}/spring-framework/docs'
+    spring-framework-api: '{spring-framework-docs-root}/{spring-version}/javadoc-api/org/springframework'
+    spring-framework-api-kdoc: '{spring-framework-docs-root}/{spring-version}/kdoc-api'
+    spring-framework-reference: '{spring-framework-docs-root}/{spring-version}/reference'
+    spring-boot-docs: '{docs-site}/spring-boot'
+    spring-boot-docs-ref: '{spring-boot-docs}/reference'
+    spring-boot-issues: '{spring-github-org}/spring-boot/issues'
+    aspectj-site: 'https://www.eclipse.org/aspectj'
+    aspectj-docs: "{aspectj-site}/doc/released"
+    aspectj-api: "{aspectj-docs}/runtime-api"
+    assertj-docs: 'https://assertj.github.io/doc'
+    bean-validation-site: 'https://beanvalidation.org'
+    graalvm-docs: 'https://www.graalvm.org/22.3/reference-manual'
+    hibernate-validator-site: 'https://hibernate.org/validator/'
+    jackson-docs: 'https://fasterxml.github.io'
+    jackson-github-org: 'https://github.com/FasterXML'
+    java-api: 'https://docs.oracle.com/en/java/javase/17/docs/api'
+    java-tutorial: 'https://docs.oracle.com/javase/tutorial'
+    JSR: 'https://www.jcp.org/en/jsr/detail?id='
+    kotlin-site: 'https://kotlinlang.org'
+    kotlin-docs: '{kotlin-site}/docs'
+    kotlin-api: '{kotlin-site}/api/latest'
+    kotlin-coroutines-api: '{kotlin-site}/api/kotlinx.coroutines'
+    micrometer-docs: 'https://docs.micrometer.io/micrometer/reference'
+    reactive-streams-site: 'https://www.reactive-streams.org'
+    reactor-site: 'https://projectreactor.io'
+    rsocket-site: 'https://rsocket.io'
+    sockjs-protocol-site: "https://sockjs.github.io/sockjs-protocol"
+    stackoverflow-site: 'https://stackoverflow.com'
+    stackoverflow-questions: '{stackoverflow-site}/questions'
+    stackoverflow-spring-tag: "{stackoverflow-questions}/tagged/spring"

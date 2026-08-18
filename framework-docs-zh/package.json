@@ -1,0 +1,19 @@
+{
+  "scripts": {
+    "build": "antora antora-playbook.yml && npm run postbuild",
+    "postbuild": "echo '<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"refresh\" content=\"0; url=/framework/overview.html\"><title>Spring Framework 中文文档</title></head><body><p>正在跳转到 <a href=\"/framework/overview.html\">Spring Framework 中文文档概览</a>...</p></body>' > build/site/index.html",
+    "serve": "http-server build/site -c-1"
+  },
+  "dependencies": {
+    "@antora/atlas-extension": "1.0.0-alpha.5",
+    "@antora/collector-extension": "1.0.3",
+    "@asciidoctor/tabs": "1.0.0-beta.6",
+    "@springio/antora-extensions": "1.14.12",
+    "@springio/asciidoctor-extensions": "1.0.0-alpha.18",
+    "antora": "3.2.0-alpha.12",
+    "fast-xml-parser": "5.7.0"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

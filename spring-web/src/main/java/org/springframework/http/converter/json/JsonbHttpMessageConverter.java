@@ -42,7 +42,8 @@ import org.springframework.util.Assert;
  * @since 5.0
  * @see jakarta.json.bind.Jsonb
  * @see jakarta.json.bind.JsonbBuilder
- * @see #setJsonb
+ * @see #JsonbHttpMessageConverter(Jsonb)
+ * @see #JsonbHttpMessageConverter(JsonbConfig)
  */
 public class JsonbHttpMessageConverter extends AbstractJsonHttpMessageConverter {
 
@@ -95,10 +96,6 @@ public class JsonbHttpMessageConverter extends AbstractJsonHttpMessageConverter 
 		return this.jsonb;
 	}
 
-	@Override
-	public boolean canWriteRepeatedly(Object o, @Nullable MediaType contentType) {
-		return true;
-	}
 
 	@Override
 	protected Object readInternal(Type resolvedType, Reader reader) throws Exception {
@@ -116,8 +113,14 @@ public class JsonbHttpMessageConverter extends AbstractJsonHttpMessageConverter 
 	}
 
 	@Override
+	public boolean canWriteRepeatedly(Object o, @Nullable MediaType contentType) {
+		return true;
+	}
+
+	@Override
 	@SuppressWarnings("removal")
 	protected boolean supportsRepeatableWrites(Object o) {
 		return true;
 	}
+
 }

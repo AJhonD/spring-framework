@@ -51,11 +51,6 @@ public class ByteArrayHttpMessageConverter extends AbstractHttpMessageConverter<
 	}
 
 	@Override
-	public boolean canWriteRepeatedly(byte[] bytes, @Nullable MediaType contentType) {
-		return true;
-	}
-
-	@Override
 	public byte[] readInternal(Class<? extends byte[]> clazz, HttpInputMessage message) throws IOException {
 		long length = message.getHeaders().getContentLength();
 		return (length >= 0 && length < Integer.MAX_VALUE ?
@@ -73,8 +68,14 @@ public class ByteArrayHttpMessageConverter extends AbstractHttpMessageConverter<
 	}
 
 	@Override
+	public boolean canWriteRepeatedly(byte[] bytes, @Nullable MediaType contentType) {
+		return true;
+	}
+
+	@Override
 	@SuppressWarnings("removal")
 	protected boolean supportsRepeatableWrites(byte[] bytes) {
 		return true;
 	}
+
 }

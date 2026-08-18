@@ -701,12 +701,20 @@ public class MediaType extends MimeType implements Serializable {
 		if (!StringUtils.hasLength(mediaTypes)) {
 			return Collections.emptyList();
 		}
-		// Avoid using java.util.stream.Stream in hot paths
-		List<String> tokenizedTypes = MimeTypeUtils.tokenize(mediaTypes);
-		List<MediaType> result = new ArrayList<>(tokenizedTypes.size());
-		for (String type : tokenizedTypes) {
-			if (StringUtils.hasText(type)) {
-				result.add(parseMediaType(type));
+		List<MimeType> mimeTypes;
+		try {
+			mimeTypes = MimeTypeUtils.parseMimeTypes(mediaTypes);
+		}
+		catch (InvalidMimeTypeException ex) {
+			throw new InvalidMediaTypeException(ex);
+		}
+		List<MediaType> result = new ArrayList<>(mimeTypes.size());
+		for (MimeType mimeType : mimeTypes) {
+			try {
+				result.add(new MediaType(mimeType));
+			}
+			catch (IllegalArgumentException ex) {
+				throw new InvalidMediaTypeException(mimeType.toString(), ex.getMessage());
 			}
 		}
 		return result;

@@ -18,16 +18,8 @@ description = "Spring Framework"
 
 configure(allprojects) { project ->
 	apply plugin: "org.springframework.build.localdev"
+    apply plugin: "org.springframework.build.repositories"
 	group = "org.springframework"
-	repositories {
-		mavenCentral()
-		if (version.contains('-')) {
-			maven { url = "https://repo.spring.io/milestone" }
-		}
-		if (version.endsWith('-SNAPSHOT')) {
-			maven { url = "https://repo.spring.io/snapshot" }
-		}
-	}
 	configurations.all {
 		resolutionStrategy {
 			cacheChangingModulesFor 0, "seconds"
@@ -78,7 +70,7 @@ configure([rootProject] + javaProjects) { project ->
 		"https://projectreactor.io/docs/core/release/api/",
 		"https://projectreactor.io/docs/test/release/api/",
 		"https://junit.org/junit4/javadoc/4.13.2/",
-		"https://docs.junit.org/6.1.1/api/",
+		"https://docs.junit.org/6.1.2/api/",
 		"https://www.reactive-streams.org/reactive-streams-1.0.4-javadoc/",
 		"https://r2dbc.io/spec/1.0.0.RELEASE/api/",
 		"https://jspecify.dev/docs/api/"

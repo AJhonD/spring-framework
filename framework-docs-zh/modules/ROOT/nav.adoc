@@ -8,7 +8,7 @@
 **** xref:core/beans/dependencies/factory-collaborators.adoc[工厂合作者]
 **** xref:core/beans/dependencies/factory-properties-detailed.adoc[工厂属性详解]
 **** xref:core/beans/dependencies/factory-dependson.adoc[工厂依赖]
-// **** xref:core/beans/dependencies/factory-lazy-init.adoc[延迟初始化]
+**** xref:core/beans/dependencies/factory-lazy-init.adoc[延迟初始化]
 // **** xref:core/beans/dependencies/factory-autowire.adoc[自动装配]
 // **** xref:core/beans/dependencies/factory-method-injection.adoc[方法注入]
 // *** xref:core/beans/factory-scopes.adoc[作用域]

@@ -27,6 +27,7 @@ include "spring-websocket"
 include "framework-api"
 include "framework-bom"
 include "framework-docs"
+include "framework-docs-zh"
 include "framework-platform"
 include "integration-tests"
 

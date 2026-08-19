@@ -1,141 +1,90 @@
 [[beans-factory-autowire]]
-= Autowiring Collaborators
+= 自动装配协作者
 
-The Spring container can autowire relationships between collaborating beans. You can
-let Spring resolve collaborators (other beans) automatically for your bean by
-inspecting the contents of the `ApplicationContext`. Autowiring has the following
-advantages:
+Spring container 可以自动装配协作 Bean 之间的关系。你可以让 Spring 通过检查 `ApplicationContext`
+的内容，自动为你的 Bean 解析协作者（其他 Bean）。自动装配具有以下优点：
 
-* Autowiring can significantly reduce the need to specify properties or constructor
-  arguments. (Other mechanisms such as a bean template
-  xref:core/beans/child-bean-definitions.adoc[discussed elsewhere in this chapter] are also valuable
-  in this regard.)
-* Autowiring can update a configuration as your objects evolve. For example, if you need
-  to add a dependency to a class, that dependency can be satisfied automatically without
-  you needing to modify the configuration. Thus autowiring can be especially useful
-  during development, without negating the option of switching to explicit wiring when
-  the code base becomes more stable.
+* 自动装配可以显著减少指定属性或构造器参数的需求。（其他机制，如 bean 模板
+xref:core/beans/child-bean-definitions.adoc[本章其他地方已讨论过]，在这方面也很有价值。）
 
-When using XML-based configuration metadata (see
-xref:core/beans/dependencies/factory-collaborators.adoc[Dependency Injection]), you
-can specify the autowire mode for a bean definition with the `autowire` attribute of the
-`<bean/>` element. The autowiring functionality has four modes. You specify autowiring
-per bean and can thus choose which ones to autowire. The following table describes the
-four autowiring modes:
+* 自动装配可以在对象演进时更新配置。例如，如果你需要为某个类添加依赖，该依赖可以自动满足，而无需你修改配置。因此，自动装配在开发期间尤其有用，同时也不排除在代码库变得更加稳定时切换到显式装配的选项
+
+当使用基于 XML 的配置元数据时（参见 xref:core/beans/dependencies/factory-collaborators.adoc[依赖注入]），你可以通过 `<bean/>` 元素的 `autowire` 属性为 bean 定义指定自动装配模式。自动装配功能有四种模式。你可以按 bean 指定自动装配，从而选择哪些 bean 需要自动装配。下表描述了这四种自动装配模式：
 
 [[beans-factory-autowiring-modes-tbl]]
-.Autowiring modes
+.自动装配模式
 [cols="20%,80%"]
 |===
-| Mode| Explanation
+| 模式 | 说明
 
 | `no`
-| (Default) No autowiring. Bean references must be defined by `ref` elements. Changing
-  the default setting is not recommended for larger deployments, because specifying
-  collaborators explicitly gives greater control and clarity. To some extent, it
-  documents the structure of a system.
+| （默认）不进行自动装配。Bean 引用必须通过 `ref` 元素来定义。对于较大的部署，不建议更改默认设置，因为显式指定协作者可以提供更好的控制性和清晰度。在某种程度上，这也记录了系统的结构。
 
 | `byName`
-| Autowiring by property name. Spring looks for a bean with the same name as the
-  property that needs to be autowired. For example, if a bean definition is set to
-  autowire by name and it contains a `master` property (that is, it has a
-  `setMaster(..)` method), Spring looks for a bean definition named `master` and uses
-  it to set the property.
+| 按属性名称自动装配。Spring 会查找与需要自动装配的属性同名的 bean。例如，如果一个 bean 定义设置为按名称自动装配，并且它包含一个 `master` 属性（即，它有一个 `setMaster(..)` 方法），Spring 会查找名为 `master` 的 bean 定义，并使用它来设置该属性。
 
 | `byType`
-| Lets a property be autowired if exactly one bean of the property type exists in
-  the container. If more than one exists, a fatal exception is thrown, which indicates
-  that you may not use `byType` autowiring for that bean. If there are no matching
-  beans, nothing happens (the property is not set).
+| 允许在 container 中恰好存在一个与属性类型匹配的 bean 时，对该属性进行自动装配。如果存在多个匹配的
+bean，则会抛出致命异常，表明您不能对该 bean 使用 `byType` 自动装配。如果没有匹配的 bean，则不进行任何操作（该属性不会被设置）。
 
 | `constructor`
-| Analogous to `byType` but applies to constructor arguments. If there is not exactly
-  one bean of the constructor argument type in the container, a fatal error is raised.
+| 与 `byType` 类似，但适用于构造函数参数。如果 container 中不存在恰好一个构造函数参数类型的bean，则会引发致命错误。
+
 |===
 
-With `byType` or `constructor` autowiring mode, you can wire arrays and
-typed collections. In such cases, all autowire candidates within the container that
-match the expected type are provided to satisfy the dependency. You can autowire
-strongly-typed `Map` instances if the expected key type is `String`. An autowired `Map`
-instance's values consist of all bean instances that match the expected type, and the
-`Map` instance's keys contain the corresponding bean names.
+使用 `byType` 或 `constructor` 自动装配模式时，您可以装配数组和类型化集合。在这种情况下，container
+中所有匹配预期类型的自动装配候选者都会被提供以满足依赖关系。如果预期的键类型是 `String`，您可以自动装配强类型的
+`Map` 实例。自动装配的 `Map` 实例的值由所有匹配预期类型的 Bean 实例组成，而 `Map` 实例的键则包含相应的 Bean 名称。
 
 
 [[beans-autowired-exceptions]]
-== Limitations and Disadvantages of Autowiring
+== 自动装配的限制与缺点
 
-Autowiring works best when it is used consistently across a project. If autowiring is
-not used in general, it might be confusing to developers to use it to wire only one or
-two bean definitions.
+自动装配在项目中一致使用时效果最佳。如果通常不使用自动装配，那么仅用它来装配一两个 Bean 定义可能会让开发者感到困惑。
 
-Consider the limitations and disadvantages of autowiring:
+考虑自动装配的局限性与不足之处：
 
-* Explicit dependencies in `property` and `constructor-arg` settings always override
-  autowiring. You cannot autowire simple properties such as primitives,
-  `Strings`, and `Classes` (and arrays of such simple properties). This limitation is
-  by-design.
-* Autowiring is less exact than explicit wiring. Although, as noted in the earlier table,
-  Spring is careful to avoid guessing in case of ambiguity that might have unexpected
-  results. The relationships between your Spring-managed objects are no longer
-  documented explicitly.
-* Wiring information may not be available to tools that may generate documentation from
-  a Spring container.
-* Multiple bean definitions within the container may match the type specified by the
-  setter method or constructor argument to be autowired. For arrays, collections, or
-  `Map` instances, this is not necessarily a problem. However, for dependencies that
-  expect a single value, this ambiguity is not arbitrarily resolved. If no unique bean
-  definition is available, an exception is thrown.
+* 在 `property` 和 `constructor-arg` 设置中的显式依赖始终会覆盖自动装配。你无法自动装配简单属性，例如基本类型、`Strings` 和
+`Classes`（以及此类简单属性的数组）。这一限制是设计使然。
+* 自动装配不如显式装配精确。不过，如前表所述，Spring 在可能出现意外结果的歧义情况下会谨慎避免猜测。您的 Spring
+管理对象之间的关系不再被显式记录。
+* 对于可能从 Spring 容器生成文档的工具来说，装配（Wiring）信息可能并不可用。
+* 容器中可能存在多个 Bean 定义，都能匹配 setter 方法或构造器参数中指定的类型，从而满足自动装配的要求。对于数组、集合或 `Map` 实例而言，这通常不成问题。但是，对于期望获得单个值的依赖项，这种歧义性不会被随意解决。如果不存在唯一的 Bean 定义可用，就会抛出异常。
 
-In the latter scenario, you have several options:
-
-* Abandon autowiring in favor of explicit wiring.
-* Avoid autowiring for a bean definition by setting its `autowire-candidate` attributes
-  to `false`, as described in the
-  xref:core/beans/dependencies/factory-autowire.adoc#beans-factory-autowire-candidate[next section].
-* Designate a single bean definition as the primary candidate by setting the
-  `primary` attribute of its `<bean/>` element to `true`.
-* Implement the more fine-grained control available with annotation-based configuration,
-  as described in xref:core/beans/annotation-config.adoc[Annotation-based Container Configuration].
-
+在后一种场景中，你有几个选择：
+* 放弃自动装配，改用显式装配。
+* 通过将 bean 定义的 `autowire-candidate` 属性设置为 `false`，避免对 bean 定义进行自动装配，具体参见
+  xref:core/beans/dependencies/factory-autowire.adoc#beans-factory-autowire-candidate[下一节]。
+* 通过将 `<bean/>` 元素的 `primary` 属性设置为 `true`，将单个 bean 定义指定为主要候选者。
+* 实现基于注解的配置所提供的更细粒度控制，具体参见 xref:core/beans/annotation-config.adoc[基于注解的container 配置]。
 
 [[beans-factory-autowire-candidate]]
-== Excluding a Bean from Autowiring
+== 从自动装配中排除 Bean
 
-On a per-bean basis, you can exclude a bean from autowiring. In Spring's XML format, set
-the `autowire-candidate` attribute of the `<bean/>` element to `false`; with the `@Bean`
-annotation, the attribute is named `autowireCandidate`. The container makes that specific
-bean definition unavailable to the autowiring infrastructure, including annotation-based
-injection points such as xref:core/beans/annotation-config/autowired.adoc[`@Autowired`].
+你可以针对单个 Bean，将其从自动装配中排除。在 Spring 的 XML 格式中，将 `<bean/>` 元素的
+`autowire-candidate` 属性设置为 `false`；使用 `@Bean` 注解时，该属性名为 `autowireCandidate`。container 会使该特定
+Bean 定义对自动装配基础设施不可用，包括基于注解的注入点（如 xref:core/beans/annotation-config/autowired.adoc[`
+@Autowired`]）。
 
-NOTE: The `autowire-candidate` attribute is designed to only affect type-based autowiring.
-It does not affect explicit references by name, which get resolved even if the
-specified bean is not marked as an autowire candidate. As a consequence, autowiring
-by name nevertheless injects a bean if the name matches.
+NOTE: `autowire-candidate` 属性旨在仅影响基于类型的自动装配。
+它不会影响按名称进行的显式引用，即使指定的 bean
+未标记为自动装配候选，这些引用仍会被解析。因此，按名称进行自动装配时，如果名称匹配，仍然会注入该 bean。
 
-You can also limit autowire candidates based on pattern-matching against bean names. The
-top-level `<beans/>` element accepts one or more patterns within its
-`default-autowire-candidates` attribute. For example, to limit autowire candidate status
-to any bean whose name ends with `Repository`, provide a value of `*Repository`. To
-provide multiple patterns, define them in a comma-separated list. An explicit value of
-`true` or `false` for a bean definition's `autowire-candidate` attribute always takes
-precedence. For such beans, the pattern matching rules do not apply.
+您还可以基于对 Bean 名称的模式匹配来限制自动装配候选。顶层 `<beans/>` 元素在其 `default-autowire-candidates`
+属性中接受一个或多个模式。例如，要将自动装配候选状态限制为名称以 `Repository` 结尾的任何 Bean，请提供值
+`*Repository`。若要提供多个模式，请以逗号分隔列表的形式定义它们。对于 Bean 定义的 `autowire-candidate`
+属性，显式值 `true` 或 `false` 始终具有优先权。对于此类 Bean，模式匹配规则不适用。
 
-These techniques are useful for beans that you never want to be injected into other beans
-by autowiring. It does not mean that an excluded bean cannot itself be configured by
-using autowiring. Rather, the bean itself is not a candidate for autowiring other beans.
-
+这些技术对于你从不希望通过自动装配注入到其他 Bean 中的 Bean 非常有用。这并不意味着被排除的 Bean
+本身不能通过自动装配进行配置。而是指该 Bean 本身不作为其他 Bean 自动装配的候选对象。
 [NOTE]
 ====
-As of 6.2, `@Bean` methods support two variants of the autowire candidate flag:
-`autowireCandidate` and `defaultCandidate`.
+自 6.2 版本起，`@Bean` 方法支持两种自动装配候选标志的变体：`autowireCandidate` 和 `defaultCandidate`。
 
-When using xref:core/beans/annotation-config/autowired-qualifiers.adoc[qualifiers],
-a bean marked with `defaultCandidate=false` is only available for injection points
-where an additional qualifier indication is present. This is useful for restricted
-delegates that are supposed to be injectable in certain areas but are not meant to
-get in the way of beans of the same type in other places. Such a bean will never
-get injected by plain declared type only, rather by type plus specific qualifier.
+当使用 xref:core/beans/annotation-config/autowired-qualifiers.adoc[qualifiers] 时，标记为 `defaultCandidate=false`
+的 bean 仅可用于存在额外限定符指示的注入点。这对于那些应在特定区域可注入、但又不希望在其他地方干扰同类型 bean
+的受限委托非常有用。此类 bean 绝不会仅通过声明的类型被注入，而是通过类型加特定限定符进行注入。
 
-In contrast, `autowireCandidate=false` behaves exactly like the `autowire-candidate`
-attribute as explained above: Such a bean will never get injected by type at all.
+相比之下，`autowireCandidate=false` 的行为与上述 `autowire-candidate` 属性完全相同：此类 bean
+永远不会通过类型被注入。
 ====

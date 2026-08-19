@@ -10,7 +10,7 @@
 **** xref:core/beans/dependencies/factory-dependson.adoc[工厂依赖]
 **** xref:core/beans/dependencies/factory-lazy-init.adoc[延迟初始化]
 **** xref:core/beans/dependencies/factory-autowire.adoc[自动装配]
-// **** xref:core/beans/dependencies/factory-method-injection.adoc[方法注入]
+**** xref:core/beans/dependencies/factory-method-injection.adoc[方法注入]
 // *** xref:core/beans/factory-scopes.adoc[作用域]
 // *** xref:core/beans/factory-nature.adoc[工厂特性]
 *** xref:core/beans/child-bean-definitions.adoc[子Bean定义]

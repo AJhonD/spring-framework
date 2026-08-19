@@ -1,23 +1,18 @@
 [[beans-factory-method-injection]]
-= Method Injection
+= 方法注入
 
-In most application scenarios, most beans in the container are
-xref:core/beans/factory-scopes.adoc#beans-factory-scopes-singleton[singletons]. When a
-singleton bean needs to collaborate with another singleton bean or a non-singleton bean
-needs to collaborate with another non-singleton bean, you typically handle the dependency
-by defining one bean as a property of the other. A problem arises when the bean lifecycles
-are different. Suppose singleton bean A needs to use non-singleton (prototype) bean B,
-perhaps on each method invocation on A. The container creates the singleton bean A only
-once, and thus only gets one opportunity to set the properties. The container cannot
-provide bean A with a new instance of bean B every time one is needed.
+在大多数应用场景中，container 中的大多数 bean 都是 xref:core/beans/factory-scopes.adoc#beans-factory-scopes-singlet
+on[singletons]。当
+单例 bean 需要与另一个单例 bean 协作，或非单例 bean
+需要与另一个非单例 bean 协作时，通常通过将一个 bean 定义为另一个 bean 的属性来处理依赖关系。当 bean
+的生命周期不同时，问题就出现了。假设单例 bean A 需要使用非单例（原型）bean B，可能是在 A
+的每次方法调用时。container 只创建单例 bean A
+一次，因此只有一次机会设置属性。container 无法在每次需要时为 bean A 提供一个新的 bean B 实例。
 
-A solution is to forego some inversion of control. You can
-xref:core/beans/factory-nature.adoc#beans-factory-aware[make bean A aware of the container]
- by implementing the `ApplicationContextAware` interface,
-and by xref:core/beans/basics.adoc#beans-factory-client[making a `getBean("B")` call to the container] ask for (a
-typically new) bean B instance every time bean A needs it. The following example
-shows this approach:
-
+一种解决方案是放弃部分控制反转。你可以通过实现 `ApplicationContextAware` 接口，让
+xref:core/beans/factory-nature.adoc#beans-factory-aware[Bean A 感知容器]，并在每次 Bean A 需要时，通过
+xref:core/beans/basics.adoc#beans-factory-client[向容器发起 `getBean("B")` 调用]来获取（通常是新的）Bean B
+实例。下面的示例展示了这一做法：
 [tabs]
 ======
 Java::
@@ -32,23 +27,22 @@ Java::
 	import org.springframework.context.ApplicationContextAware;
 
 	/**
-	 * A class that uses a stateful Command-style class to perform
-	 * some processing.
+	 * 使用有状态的 Command 风格类来执行某些处理的类。
 	 */
 	public class CommandManager implements ApplicationContextAware {
 
 		private ApplicationContext applicationContext;
 
 		public Object process(Map commandState) {
-			// grab a new instance of the appropriate Command
+			// 获取相应 `Command` 的新实例。
 			Command command = createCommand();
-			// set the state on the (hopefully brand new) Command instance
+			// 在（希望是全新的）`Command` 实例上设置状态。
 			command.setState(commandState);
 			return command.execute();
 		}
 
 		protected Command createCommand() {
-			// notice the Spring API dependency!
+			// 注意 Spring API 依赖！
 			return this.applicationContext.getBean("command", Command.class);
 		}
 
@@ -94,43 +88,31 @@ Kotlin::
 ----
 ======
 
-The preceding is not desirable, because the business code is aware of and coupled to the
-Spring Framework. Method Injection, a somewhat advanced feature of the Spring IoC
-container, lets you handle this use case cleanly.
+上述做法并不可取，因为业务代码会感知并耦合到
+Spring 框架。方法注入是 Spring IoC 容器的一项较为高级的特性，可让你干净利落地处理这种用例。
 
 ****
-You can read more about the motivation for Method Injection in
-{spring-site-blog}/2004/08/06/method-injection/[this blog entry].
+你可以在{spring-site-blog}/2004/08/06/method-injection/[这篇博客文章]中了解更多关于方法注入的动机。
 ****
 
 
 [[beans-factory-lookup-method-injection]]
-== Lookup Method Injection
+== 查找方法注入
 
-Lookup method injection is the ability of the container to override methods on
-container-managed beans and return the lookup result for another named bean in the
-container. The lookup typically involves a prototype bean, as in the scenario described
-in xref:core/beans/dependencies/factory-method-injection.adoc[the preceding section]. The Spring Framework
-implements this method injection by using bytecode generation from the CGLIB library to
-dynamically generate a subclass that overrides the method.
+查找方法注入是指容器能够覆盖容器管理 Bean 上的方法，并返回容器中另一个指定 Bean 的查找结果。这种查找通常涉及原型
+Bean，正如 xref:core/beans/dependencies/factory-method-injection.adoc[上一节] 所描述的场景。Spring 框架通过使用 CGLIB 库生成字节码，动态创建覆盖该方法的子类，从而实现这种方法注入。
 
 [NOTE]
 ====
-* For this dynamic subclassing to work, the class that the Spring bean container
-  subclasses cannot be `final`, and the method to be overridden cannot be `final`, either.
-* Unit-testing a class that has an `abstract` method requires you to subclass the class
-  yourself and to supply a stub implementation of the `abstract` method.
-* A further key limitation is that lookup methods do not work with factory methods and
-  in particular not with `@Bean` methods in configuration classes, since, in that case,
-  the container is not in charge of creating the instance and therefore cannot create
-  a runtime-generated subclass on the fly.
+* 要使这种动态子类化生效，Spring Bean 容器所子类化的类不能是 `final`，且待重写的方法也不能是 `final`。
+* 对包含 `abstract` 方法的类进行单元测试时，需要自行对该类进行子类化，并为 `abstract` 方法提供桩实现。
+* 另一个关键限制是，查找方法无法与工厂方法配合使用，尤其不适用于配置类中的 `@Bean`
+方法，因为在这种情况下，容器并不负责创建实例，因此无法在运行时动态生成子类。
 ====
 
-In the case of the `CommandManager` class in the previous code snippet, the
-Spring container dynamically overrides the implementation of the `createCommand()`
-method. The `CommandManager` class does not have any Spring dependencies, as
-the reworked example shows:
-
+在前一个代码片段中的 `CommandManager` 类的情况下，Spring
+容器会动态覆盖 `createCommand()` 方法的实现。`CommandManager` 类没有任何 Spring 依赖，正如
+重新修改后的示例所示：
 [tabs]
 ======
 Java::
@@ -139,19 +121,19 @@ Java::
 ----
 	package fiona.apple;
 
-	// no more Spring imports!
+	// 不再需要 Spring 导入！
 
 	public abstract class CommandManager {
 
 		public Object process(Object commandState) {
-			// grab a new instance of the appropriate Command interface
+			// 获取相应 `Command` 接口的新实例
 			Command command = createCommand();
-			// set the state on the (hopefully brand new) Command instance
+			// 在（希望是全新的）`Command` 实例上设置状态
 			command.setState(commandState);
 			return command.execute();
 		}
 
-		// okay... but where is the implementation of this method?
+		// 好的……但这个方法的具体实现在哪里？
 		protected abstract Command createCommand();
 	}
 ----
@@ -162,57 +144,53 @@ Kotlin::
 ----
 	package fiona.apple
 
-	// no more Spring imports!
+	// 不再需要 Spring 导入！
 
 	abstract class CommandManager {
 
 		fun process(commandState: Any): Any {
-			// grab a new instance of the appropriate Command interface
+			// 获取相应 `Command` 接口的新实例
 			val command = createCommand()
-			// set the state on the (hopefully brand new) Command instance
+			// 在（希望是全新的）`Command` 实例上设置状态
 			command.state = commandState
 			return command.execute()
 		}
 
-		// okay... but where is the implementation of this method?
+		// 好的……但这个方法的具体实现在哪里？
 		protected abstract fun createCommand(): Command
 	}
 ----
 ======
 
-In the client class that contains the method to be injected (the `CommandManager` in this
-case), the method to be injected requires a signature of the following form:
+在包含待注入方法的客户端类中（本例中的 `CommandManager`），待注入方法需要具有以下形式的签名：
 
 [source,xml,indent=0,subs="verbatim,quotes"]
 ----
 	<public|protected> [abstract] <return-type> theMethodName(no-arguments);
 ----
 
-If the method is `abstract`, the dynamically-generated subclass implements the method.
-Otherwise, the dynamically-generated subclass overrides the concrete method defined in
-the original class. Consider the following example:
+如果方法是 `abstract`，动态生成的子类会实现该方法。
+否则，动态生成的子类会覆盖原始类中定义的具体方法。请看以下示例：
 
 [source,xml,indent=0,subs="verbatim,quotes"]
 ----
-	<!-- a stateful bean deployed as a prototype (non-singleton) -->
+	<!-- 以原型（非单例）方式部署的有状态 Bean-->
 	<bean id="myCommand" class="fiona.apple.AsyncCommand" scope="prototype">
-		<!-- inject dependencies here as required -->
+		<!-- 在此处按需注入依赖 -->
 	</bean>
 
-	<!-- commandManager uses myCommand prototype bean -->
+	<!-- commandManager 使用 myCommand 原型 Bean -->
 	<bean id="commandManager" class="fiona.apple.CommandManager">
 		<lookup-method name="createCommand" bean="myCommand"/>
 	</bean>
 ----
 
-The bean identified as `commandManager` calls its own `createCommand()` method
-whenever it needs a new instance of the `myCommand` bean. You must be careful to deploy
-the `myCommand` bean as a prototype if that is actually what is needed. If it is
-a xref:core/beans/factory-scopes.adoc#beans-factory-scopes-singleton[singleton], the same instance of the `myCommand`
-bean is returned each time.
+标识为 `commandManager` 的 Bean 在每次需要 `myCommand` Bean 的新实例时，都会调用自身的 `createCommand()`
+方法。如果确实需要原型作用域，则必须将 `myCommand` Bean 部署为原型。如果它是
+xref:core/beans/factory-scopes.adoc#beans-factory-scopes-singleton[单例]，那么每次返回的都是 `myCommand` Bean
+的同一个实例。
 
-Alternatively, within the annotation-based component model, you can declare a lookup
-method through the `@Lookup` annotation, as the following example shows:
+另外，在基于注解的组件模型中，可以通过 `@Lookup` 注解来声明查找方法，如下例所示：
 
 [tabs]
 ======
@@ -251,8 +229,7 @@ Kotlin::
 ----
 ======
 
-Or, more idiomatically, you can rely on the target bean getting resolved against the
-declared return type of the lookup method:
+或者，更惯用的做法是，你可以依赖目标 Bean 根据查找方法声明的返回类型来解析。
 
 [tabs]
 ======
@@ -293,26 +270,21 @@ Kotlin::
 
 [TIP]
 ====
-Another way of accessing differently scoped target beans is an `ObjectFactory`/
-`Provider` injection point. See
-xref:core/beans/factory-scopes.adoc#beans-factory-scopes-other-injection[Scoped Beans as Dependencies].
+访问不同作用域目标 Bean 的另一种方式是通过 `ObjectFactory`/`Provider` 注入点。请参阅
+xref:core/beans/factory-scopes.adoc#beans-factory-scopes-other-injection[将作用域 Bean 作为依赖项]。
 
-You may also find the `ServiceLocatorFactoryBean` (in the
-`org.springframework.beans.factory.config` package) to be useful.
+您可能还会发现 `ServiceLocatorFactoryBean`（位于 `org.springframework.beans.factory.config` 包中）很有用。
 ====
 
 
 [[beans-factory-arbitrary-method-replacement]]
-== Arbitrary Method Replacement
+== 任意方法替换
 
-A less useful form of method injection than lookup method injection is the ability to
-replace arbitrary methods in a managed bean with another method implementation. You
-can safely skip the rest of this section until you actually need this functionality.
+方法注入中，比查找方法注入实用性稍逊的一种形式，是能够用另一个方法实现来替换受管 Bean
+中的任意方法。在真正需要此功能之前，你可以放心跳过本节其余内容。
 
-With XML-based configuration metadata, you can use the `replaced-method` element to
-replace an existing method implementation with another, for a deployed bean. Consider
-the following class, which has a method called `computeValue` that we want to override:
-
+使用基于 XML 的配置元数据时，你可以利用 `replaced-method` 元素，为已部署的 Bean
+替换现有方法实现。考虑以下类，其中有一个名为 `computeValue` 的方法，我们希望将其覆盖：
 [tabs]
 ======
 Java::
@@ -344,8 +316,7 @@ Kotlin::
 ----
 ======
 
-A class that implements the `org.springframework.beans.factory.support.MethodReplacer`
-interface provides the new method definition, as the following example shows:
+实现 `org.springframework.beans.factory.support.MethodReplacer` 接口的类提供了新方法的定义，如下例所示：
 
 [tabs]
 ======
@@ -354,13 +325,12 @@ Java::
 [source,java,indent=0,subs="verbatim,quotes"]
 ----
 	/**
-	 * meant to be used to override the existing computeValue(String)
-	 * implementation in MyValueCalculator
+	 * 该内容旨在用于覆盖 `MyValueCalculator` 中现有的 `computeValue(String)` 实现。
 	 */
 	public class ReplacementComputeValue implements MethodReplacer {
 
 		public Object reimplement(Object o, Method m, Object[] args) throws Throwable {
-			// get the input value, work with it, and return a computed result
+			// 获取输入值，对其进行处理，然后返回计算结果。
 			String input = (String) args[0];
 			...
 			return ...;
@@ -373,13 +343,12 @@ Kotlin::
 [source,kotlin,indent=0,subs="verbatim,quotes"]
 ----
 	/**
-	 * meant to be used to override the existing computeValue(String)
-	 * implementation in MyValueCalculator
+	 * 用于覆盖 `MyValueCalculator` 中现有的 `computeValue(String)` 实现。
 	 */
 	class ReplacementComputeValue : MethodReplacer {
 
 		override fun reimplement(obj: Any, method: Method, args: Array<out Any>): Any {
-			// get the input value, work with it, and return a computed result
+			// 获取输入值，对其进行处理，然后返回计算结果。
 			val input = args[0] as String;
 			...
 			return ...;
@@ -390,8 +359,7 @@ Kotlin::
 
 
 
-The bean definition to deploy the original class and specify the method override would
-resemble the following example:
+用于部署原始类并指定方法覆写的 Bean 定义，示例如下：
 
 [source,xml,indent=0,subs="verbatim,quotes"]
 ----
@@ -405,12 +373,9 @@ resemble the following example:
 	<bean id="replacementComputeValue" class="a.b.c.ReplacementComputeValue"/>
 ----
 
-You can use one or more `<arg-type/>` elements within the `<replaced-method/>`
-element to indicate the method signature of the method being overridden. The signature
-for the arguments is necessary only if the method is overloaded and multiple variants
-exist within the class. For convenience, the type string for an argument may be a
-substring of the fully qualified type name. For example, the following all match
-`java.lang.String`:
+你可以在 `<replaced-method/>` 元素内使用一个或多个 `<arg-type/>`
+元素，来指明被重写方法的方法签名。仅当方法被重载且类中存在多个变体时，才需要提供参数签名。为方便起见，参数的类型字
+符串可以是完全限定类型名的子串。例如，以下写法都能匹配 `java.lang.String`：
 
 [source,java,indent=0,subs="verbatim,quotes"]
 ----
@@ -419,6 +384,4 @@ substring of the fully qualified type name. For example, the following all match
 	Str
 ----
 
-Because the number of arguments is often enough to distinguish between each possible
-choice, this shortcut can save a lot of typing, by letting you type only the
-shortest string that matches an argument type.
+由于参数的数量通常足以区分每个可能的选择，这一快捷方式能让你只需键入与某个参数类型匹配的最短字符串，从而节省大量输入。

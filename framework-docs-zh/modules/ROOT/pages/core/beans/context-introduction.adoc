@@ -1,16 +1,12 @@
 [[context-introduction]]
 = Additional Capabilities of the `ApplicationContext`
 
-As discussed in the xref:core/beans/introduction.adoc[chapter introduction], the `org.springframework.beans.factory`
-package provides basic functionality for managing and manipulating beans, including in a
-programmatic way. The `org.springframework.context` package adds the
-{spring-framework-api}/context/ApplicationContext.html[`ApplicationContext`]
-interface, which extends the `BeanFactory` interface, in addition to extending other
-interfaces to provide additional functionality in a more application
-framework-oriented style. Many people use the `ApplicationContext` in a completely
-declarative fashion, not even creating it programmatically, but instead relying on
-support classes such as `ContextLoader` to automatically instantiate an
-`ApplicationContext` as part of the normal startup process of a Jakarta EE web application.
+如 xref:core/beans/introduction.adoc[章节引言]所述，`org.springframework.beans.factory` 包提供了管理和操作 Bean
+的基础功能，包括以编程方式进行的操作。`org.springframework.context`
+包则新增了{spring-framework-api}/context/ApplicationContext.html[`ApplicationContext`]接口，该接口在扩展
+`BeanFactory` 接口的基础上，还扩展了其他接口，以更偏向应用框架风格的方式提供额外功能。许多人完全以声明式方式使用
+`ApplicationContext`，甚至不通过编程方式创建它，而是依赖诸如 `ContextLoader` 之类的支持类，在 Jakarta EE Web
+应用正常启动过程中自动实例化一个 `ApplicationContext`。
 
 To enhance `BeanFactory` functionality in a more framework-oriented style, the context
 package also provides the following functionality:
